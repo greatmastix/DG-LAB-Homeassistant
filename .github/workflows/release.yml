@@ -1,6 +1,10 @@
 name: Release
 
+# Publishes the version in manifest.json as a GitHub release, using its
+# CHANGELOG.md section as the notes. Run it manually after bumping the version,
+# or push a matching v<version> tag.
 on:
+  workflow_dispatch:
   push:
     tags: ["v*"]
 
@@ -13,10 +17,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      # Annotated tags are fetched as lightweight; restore the message for --notes-from-tag.
-      - run: git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
-      - run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-from-tag --verify-tag
+      - name: Read version and notes
+        run: |
+          version=$(jq -r .version custom_components/dg_lab/manifest.json)
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match manifest version $version"
+            exit 1
+          fi
+          awk -v heading="## $version" '
+            $0 == heading { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "::error::CHANGELOG.md has no section for $version"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - name: Create release
+        run: gh release create "v$VERSION" --title "v$VERSION" --notes-file notes.md --target "$GITHUB_SHA"
         env:
           GH_TOKEN: ${{ github.token }}
