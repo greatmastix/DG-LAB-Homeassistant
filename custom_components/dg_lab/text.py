@@ -7,7 +7,7 @@ from typing import Any
 
 from homeassistant.components.text import RestoreText, TextEntity, TextMode
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
+from homeassistant.const import MAX_LENGTH_STATE_STATE, Platform
 from homeassistant.core import HomeAssistant, callback
 
 from .api import DGLabClient, channel_name
@@ -59,7 +59,8 @@ class DGLabPulseFramesText(DGLabChannelEntity, RestoreText):
     _attr_icon = "mdi:code-json"
     _attr_mode = TextMode.TEXT
     _attr_native_min = 0
-    _attr_native_max = 1800
+    # Longer values cannot be shown as an entity state; use a pulse preset.
+    _attr_native_max = MAX_LENGTH_STATE_STATE
 
     def __init__(
         self, client: DGLabClient, client_id: str, slot_id: str, channel: int

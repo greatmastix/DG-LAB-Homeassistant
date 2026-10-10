@@ -31,7 +31,7 @@ A custom Home Assistant integration for pairing with and controlling DG-LAB V4 d
 If the button does not open your instance, add this repository manually as a custom **Integration** repository in HACS:
 
 ```text
-https://github.com/greatmastix/DG-LAB-Homeassisstant
+https://github.com/greatmastix/DG-LAB-Homeassistant
 ```
 
 ### Manual installation
@@ -98,6 +98,8 @@ data:
 ```
 
 Presets are shared across all DG-LAB entries and survive restarts. Each channel gets a **pulse preset** select: pick a preset to make that channel's **send pulse** button use it, or pick **Custom frames** to use the channel's pulse frames text entity. The `dg_lab.send_pulse` action accepts `preset` as an alternative to `frames`. Remove a preset with `dg_lab.delete_pulse_preset`; channels that used it fall back to their custom frames.
+
+The pulse frames text entity holds at most 255 characters, Home Assistant's limit for entity states. Use a preset for longer frame lists.
 
 ## Actions
 
