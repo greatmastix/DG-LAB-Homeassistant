@@ -20,6 +20,13 @@ from custom_components.dg_lab.const import (
 from custom_components.dg_lab.websocket import DGLabWebSocketView
 
 
+async def wait_until(predicate, timeout: float = 5) -> None:
+    """Yield to the event loop until socket-delivered state is processed."""
+    async with asyncio.timeout(timeout):
+        while not predicate():
+            await asyncio.sleep(0.01)
+
+
 class LocalWebSocketTest(unittest.IsolatedAsyncioTestCase):
     """Exercise the app-facing V4 frames over a real local socket."""
 
@@ -119,8 +126,7 @@ class LocalWebSocketTest(unittest.IsolatedAsyncioTestCase):
                     }]},
                 },
             })
-            await asyncio.sleep(0)
-            self.assertIsNotNone(self.client.device(client_id, "slot-a"))
+            await wait_until(lambda: self.client.device(client_id, "slot-a"))
 
             command = asyncio.create_task(
                 self.client.add_intensity(client_id, "slot-a", "A", 3)
@@ -138,8 +144,7 @@ class LocalWebSocketTest(unittest.IsolatedAsyncioTestCase):
             })
             self.assertEqual(await asyncio.wait_for(command, 5), {"ok": True})
 
-        await asyncio.sleep(0)
-        self.assertNotIn(client_id, self.client.apps)
+        await wait_until(lambda: client_id not in self.client.apps)
         self.assertFalse(self.client.devices)
         self.assertFalse(self.client.channel_settings)
 

@@ -296,9 +296,13 @@ send_pulse:
             domain: number
           multiple: true
     frames:
-      required: true
+      required: false
       selector:
         object:
+    preset:
+      required: false
+      selector:
+        text:
     duration_ms:
       required: true
       default: 1000
@@ -454,3 +458,38 @@ send_rpc:
           required: false
           selector:
             text:
+
+stop_all:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: dg_lab
+    timeout:
+      required: false
+      selector:
+        number:
+          min: 0.1
+          max: 86400
+          step: 0.1
+          unit_of_measurement: s
+          mode: box
+
+save_pulse_preset:
+  fields:
+    name:
+      required: true
+      selector:
+        text:
+    frames:
+      required: true
+      selector:
+        object:
+
+delete_pulse_preset:
+  fields:
+    name:
+      required: true
+      selector:
+        text:

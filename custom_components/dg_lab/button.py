@@ -20,6 +20,7 @@ from .entity import (
     iter_device_channels,
     remove_stale_entities,
 )
+from .presets import pulse_presets
 
 
 async def async_setup_entry(
@@ -36,10 +37,12 @@ async def async_setup_entry(
         entities: list[ButtonEntity] = []
         current: set[tuple[Any, ...]] = set()
 
-        key = ("hub", "reconnect")
-        current.add(key)
-        if key not in seen:
-            entity = DGLabReconnectButton(client)
+        for cls in (DGLabReconnectButton, DGLabStopAllButton):
+            key = ("hub", cls.__name__)
+            current.add(key)
+            if key in seen:
+                continue
+            entity = cls(client)
             assert entity.unique_id is not None
             seen[key] = entity.unique_id
             entities.append(entity)
@@ -99,6 +102,21 @@ class DGLabReconnectButton(DGLabHubEntity, ButtonEntity):
     async def async_press(self) -> None:
         """Press the button."""
         await self.client.async_reconnect()
+
+
+class DGLabStopAllButton(DGLabHubEntity, ButtonEntity):
+    """Stop output on every connected app, device, and channel."""
+
+    _attr_name = "Stop all output"
+    _attr_icon = "mdi:alert-octagon"
+
+    def __init__(self, client: DGLabClient) -> None:
+        """Initialize the button."""
+        super().__init__(client, "stop_all")
+
+    async def async_press(self) -> None:
+        """Press the button."""
+        await self.client.stop_all()
 
 
 class DGLabRequestDevicesButton(DGLabAppEntity, ButtonEntity):
@@ -281,10 +299,16 @@ class DGLabSendPulseButton(DGLabChannelButton):
     async def async_press(self) -> None:
         """Press the button."""
         setting = self.client.channel_setting(self.client_id, self.slot_id, self.channel)
+        presets = pulse_presets(self.hass)
+        frames = (
+            presets.get(setting.pulse_preset)
+            if setting.pulse_preset in presets.names
+            else normalize_frames(setting.pulse_frames)
+        )
         await self.client.send_pulse(
             self.client_id,
             self.slot_id,
             self.channel,
-            normalize_frames(setting.pulse_frames),
+            frames,
             setting.pulse_duration_ms,
         )

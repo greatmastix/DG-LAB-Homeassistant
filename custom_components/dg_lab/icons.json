@@ -26,6 +26,15 @@
     },
     "send_rpc": {
       "service": "mdi:code-json"
+    },
+    "stop_all": {
+      "service": "mdi:alert-octagon"
+    },
+    "save_pulse_preset": {
+      "service": "mdi:content-save-outline"
+    },
+    "delete_pulse_preset": {
+      "service": "mdi:delete-outline"
     }
   }
 }

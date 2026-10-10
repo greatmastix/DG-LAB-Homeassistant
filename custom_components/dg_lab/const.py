@@ -44,12 +44,17 @@ PLATFORMS: list[Platform] = [
     Platform.BUTTON,
     Platform.IMAGE,
     Platform.NUMBER,
+    Platform.SELECT,
     Platform.SENSOR,
     Platform.TEXT,
 ]
 
 CHANNELS = {"A": 0, "B": 1}
 CHANNEL_NAMES = {0: "A", 1: "B"}
+
+DATA_PULSE_PRESETS = f"{DOMAIN}_pulse_presets"
+PRESET_CUSTOM = "Custom frames"
+PRESET_NAME_MAX_LENGTH = 64
 
 EVENT_CUSTOM_ACTION = f"{DOMAIN}_custom_action"
 EVENT_CLIENT_ATTACHED = f"{DOMAIN}_client_attached"
@@ -59,13 +64,16 @@ EVENT_ERROR = f"{DOMAIN}_error"
 
 SERVICE_ADD_INTENSITY = "add_intensity"
 SERVICE_CLEAR_OPERATIONS = "clear_operations"
+SERVICE_DELETE_PULSE_PRESET = "delete_pulse_preset"
 SERVICE_PING = "ping"
 SERVICE_RECONNECT = "reconnect"
 SERVICE_REQUEST_DEVICES = "request_devices"
+SERVICE_SAVE_PULSE_PRESET = "save_pulse_preset"
 SERVICE_SEND_PULSE = "send_pulse"
 SERVICE_SEND_RPC = "send_rpc"
 SERVICE_SET_INTENSITY = "set_intensity"
 SERVICE_SET_TEMP_INTENSITY = "set_temp_intensity"
+SERVICE_STOP_ALL = "stop_all"
 
 ATTR_CHANNEL = "channel"
 ATTR_CLIENT_ID = "client_id"
@@ -73,7 +81,9 @@ ATTR_CONFIG_ENTRY_ID = "config_entry_id"
 ATTR_DURATION_MS = "duration_ms"
 ATTR_FRAMES = "frames"
 ATTR_IMMEDIATE = "immediate"
+ATTR_NAME = "name"
 ATTR_PAYLOAD = "payload"
+ATTR_PRESET = "preset"
 ATTR_PRIORITY = "priority"
 ATTR_SEQ = "seq"
 ATTR_SLOT_ID = "slot_id"

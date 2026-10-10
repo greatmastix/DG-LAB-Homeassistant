@@ -15,6 +15,8 @@ A custom Home Assistant integration for pairing with and controlling DG-LAB V4 d
 - Optional two-channel Opossum emulator for hardware-free testing.
 - Sensors for device properties, slot state, and raw diagnostic data.
 - Per-channel intensity, temporary intensity, pulse, reset, and clear controls.
+- A **Stop all output** emergency button and action covering every connected channel.
+- Saved pulse presets, selectable per channel or by name in actions.
 - Home Assistant actions for every supported V4 control path.
 
 ## Installation
@@ -80,6 +82,23 @@ The **Pairing ID** sensor also provides these attributes:
 
 The pairing ID is a secret access token for the unauthenticated WebSocket endpoint. Keep the URL private and use HTTPS when crossing an untrusted network. Pairing details can change after a reconnect.
 
+## Emergency stop
+
+The hub device has a **Stop all output** button. It clears queued operations and sets intensity to `0` on every channel of every connected app. The same thing is available as the `dg_lab.stop_all` action, so you can bind it to a physical button or a dashboard tile. Every target is attempted even when one app fails to respond; failures are reported afterwards.
+
+## Pulse presets
+
+Save waveform frames under a name once, then reuse them:
+
+```yaml
+action: dg_lab.save_pulse_preset
+data:
+  name: Slow wave
+  frames: [...]  # same V4 frame list you would pass to dg_lab.send_pulse
+```
+
+Presets are shared across all DG-LAB entries and survive restarts. Each channel gets a **pulse preset** select: pick a preset to make that channel's **send pulse** button use it, or pick **Custom frames** to use the channel's pulse frames text entity. The `dg_lab.send_pulse` action accepts `preset` as an alternative to `frames`. Remove a preset with `dg_lab.delete_pulse_preset`; channels that used it fall back to their custom frames.
+
 ## Actions
 
 The integration registers these actions under the `dg_lab` domain:
@@ -93,6 +112,9 @@ The integration registers these actions under the `dg_lab` domain:
 - `dg_lab.send_pulse`
 - `dg_lab.clear_operations`
 - `dg_lab.send_rpc`
+- `dg_lab.stop_all`
+- `dg_lab.save_pulse_preset`
+- `dg_lab.delete_pulse_preset`
 
 Actions provide Home Assistant entity or connection dropdowns. Channel actions accept one or more number entities, so the same intensity or pulse command can target several channels at once. **Stop operations** accepts hub, app, device, or channel entities and uses the selected entity's scope.
 
@@ -106,3 +128,12 @@ Raw V4 targeting remains available under each action's collapsed **Advanced targ
 - V4 only supports setting absolute intensity directly to `0`. Other changes are sent as relative deltas from the last reported channel intensity.
 
 Use automations carefully: the integration exposes live intensity and pulse controls.
+
+## Development
+
+```sh
+pip install -r requirements_test.txt
+python -m pytest tests
+```
+
+The **Validate** GitHub workflow runs hassfest, HACS validation, and the test suite on every push and pull request.

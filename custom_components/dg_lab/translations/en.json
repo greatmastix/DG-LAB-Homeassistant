@@ -303,7 +303,7 @@
     },
     "send_pulse": {
       "name": "Send pulse",
-      "description": "Send waveform frames to one or more DG-LAB channels.",
+      "description": "Send waveform frames or a saved pulse preset to one or more DG-LAB channels.",
       "fields": {
         "entity_id": {
           "name": "Channel entities",
@@ -311,7 +311,11 @@
         },
         "frames": {
           "name": "Waveform frames",
-          "description": "V4 waveform frame list."
+          "description": "V4 waveform frame list. Leave empty when using a preset."
+        },
+        "preset": {
+          "name": "Preset",
+          "description": "Name of a saved pulse preset to send instead of waveform frames."
         },
         "duration_ms": {
           "name": "Duration",
@@ -430,6 +434,44 @@
         "advanced_targeting": {
           "name": "Advanced targeting",
           "description": "Use raw V4 identifiers instead of the entity picker."
+        }
+      }
+    },
+    "stop_all": {
+      "name": "Stop all output",
+      "description": "Clear operations and set intensity to 0 on every channel of every connected app. Applies to every connection when none is selected.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Connection",
+          "description": "DG-LAB configuration entry to stop. Leave empty to stop all entries."
+        },
+        "timeout": {
+          "name": "Timeout",
+          "description": "Maximum time to wait for each app response."
+        }
+      }
+    },
+    "save_pulse_preset": {
+      "name": "Save pulse preset",
+      "description": "Store waveform frames under a name so they can be chosen from a channel's pulse preset select or sent with the send pulse action. Saving an existing name replaces it.",
+      "fields": {
+        "name": {
+          "name": "Name",
+          "description": "Preset name, up to 64 characters."
+        },
+        "frames": {
+          "name": "Waveform frames",
+          "description": "V4 waveform frame list, JSON list, or comma-separated text."
+        }
+      }
+    },
+    "delete_pulse_preset": {
+      "name": "Delete pulse preset",
+      "description": "Remove a saved pulse preset. Channels using it fall back to their custom frames.",
+      "fields": {
+        "name": {
+          "name": "Name",
+          "description": "Preset name to delete."
         }
       }
     }

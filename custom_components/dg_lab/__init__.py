@@ -37,26 +37,35 @@ from .const import (
     ATTR_DURATION_MS,
     ATTR_FRAMES,
     ATTR_IMMEDIATE,
+    ATTR_NAME,
     ATTR_PAYLOAD,
+    ATTR_PRESET,
     ATTR_PRIORITY,
     ATTR_SEQ,
     ATTR_SLOT_ID,
     ATTR_TIMEOUT,
     ATTR_VALUE,
     ATTR_VERSION,
+    DATA_PULSE_PRESETS,
     DOMAIN,
     PLATFORMS,
     SERVICE_ADD_INTENSITY,
     SERVICE_CLEAR_OPERATIONS,
+    SERVICE_DELETE_PULSE_PRESET,
     SERVICE_PING,
     SERVICE_RECONNECT,
     SERVICE_REQUEST_DEVICES,
+    SERVICE_SAVE_PULSE_PRESET,
     SERVICE_SEND_PULSE,
     SERVICE_SEND_RPC,
     SERVICE_SET_INTENSITY,
     SERVICE_SET_TEMP_INTENSITY,
+    SERVICE_STOP_ALL,
 )
+from .presets import DGLabPulsePresets
 from .websocket import DGLabWebSocketView
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 _CHANNEL_SCHEMA = vol.Any(
     vol.In(["A", "a", "B", "b", "0", "1"]),
@@ -97,6 +106,9 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
     """Set up global DG-LAB services."""
     hass.data.setdefault(DOMAIN, {})
     hass.http.register_view(DGLabWebSocketView(hass))
+    presets = DGLabPulsePresets(hass)
+    await presets.async_load()
+    hass.data[DATA_PULSE_PRESETS] = presets
 
     async def handle_reconnect(call: ServiceCall) -> None:
         for client in _clients_from_call(hass, call):
@@ -167,7 +179,12 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
 
     async def handle_send_pulse(call: ServiceCall) -> None:
         await _async_check_entity_permissions(hass, call)
-        frames = normalize_frames(call.data[ATTR_FRAMES])
+        if ATTR_PRESET in call.data:
+            frames = presets.get(call.data[ATTR_PRESET])
+        elif ATTR_FRAMES in call.data:
+            frames = normalize_frames(call.data[ATTR_FRAMES])
+        else:
+            raise ServiceValidationError("Provide either frames or a pulse preset")
         for target in _channel_targets_from_call(hass, call):
             assert target.client_id is not None
             assert target.slot_id is not None
@@ -195,6 +212,16 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
                 channel=target.channel,
                 timeout=call.data.get(ATTR_TIMEOUT),
             )
+
+    async def handle_stop_all(call: ServiceCall) -> None:
+        for client in _clients_from_call(hass, call):
+            await client.stop_all(timeout=call.data.get(ATTR_TIMEOUT))
+
+    async def handle_save_pulse_preset(call: ServiceCall) -> None:
+        await presets.async_save(call.data[ATTR_NAME], call.data[ATTR_FRAMES])
+
+    async def handle_delete_pulse_preset(call: ServiceCall) -> None:
+        await presets.async_delete(call.data[ATTR_NAME])
 
     async def handle_send_rpc(call: ServiceCall) -> None:
         await _async_check_entity_permissions(hass, call)
@@ -291,7 +318,8 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
         schema=vol.Schema(
             {
                 **_CHANNEL_COMMAND_SCHEMA,
-                vol.Required(ATTR_FRAMES): vol.Any(cv.string, list),
+                vol.Exclusive(ATTR_FRAMES, "pulse_source"): vol.Any(cv.string, list),
+                vol.Exclusive(ATTR_PRESET, "pulse_source"): cv.string,
                 vol.Required(ATTR_DURATION_MS): vol.All(
                     vol.Coerce(int), vol.Range(min=1, max=86_400_000)
                 ),
@@ -314,6 +342,34 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
                 vol.Optional(ATTR_TIMEOUT): _TIMEOUT_SCHEMA,
             }
         ),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_STOP_ALL,
+        handle_stop_all,
+        schema=vol.Schema(
+            {
+                **_BASE_SCHEMA,
+                vol.Optional(ATTR_TIMEOUT): _TIMEOUT_SCHEMA,
+            }
+        ),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SAVE_PULSE_PRESET,
+        handle_save_pulse_preset,
+        schema=vol.Schema(
+            {
+                vol.Required(ATTR_NAME): cv.string,
+                vol.Required(ATTR_FRAMES): vol.Any(cv.string, list),
+            }
+        ),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_DELETE_PULSE_PRESET,
+        handle_delete_pulse_preset,
+        schema=vol.Schema({vol.Required(ATTR_NAME): cv.string}),
     )
     hass.services.async_register(
         DOMAIN,

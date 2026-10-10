@@ -168,6 +168,7 @@ class DGLabChannelSettings:
     temp_duration_ms: int = 3000
     pulse_duration_ms: int = 1000
     pulse_frames: str = ""
+    pulse_preset: str | None = None
 
 
 def entry_value(entry: ConfigEntry, key: str, default: Any) -> Any:
@@ -1486,3 +1487,45 @@ class DGLabClient:
         if data:
             request["data"] = data
         return await self.send_rpc(client_id, request, timeout=timeout)
+
+    async def stop_all(self, *, timeout: float | None = None) -> None:
+        """Clear operations and zero every channel on every connected app."""
+        client_ids = sorted(self.connected_client_ids)
+        results = await asyncio.gather(
+            *(self._stop_app(client_id, timeout=timeout) for client_id in client_ids)
+        )
+        failures = [failure for app_failures in results for failure in app_failures]
+        if failures:
+            raise HomeAssistantError(
+                "Emergency stop did not reach every target: " + "; ".join(failures)
+            )
+
+    async def _stop_app(
+        self, client_id: str, *, timeout: float | None = None
+    ) -> list[str]:
+        """Stop one app, attempting every step even when an earlier one fails."""
+        failures: list[str] = []
+        try:
+            await self.clear_operations(client_id, timeout=timeout)
+        except (HomeAssistantError, ClientError, OSError) as err:
+            failures.append(f"clear {client_id}: {err}")
+
+        for device in list(self.devices.values()):
+            if device.client_id != client_id or not device_is_connected(device):
+                continue
+            for channel in CHANNEL_NAMES:
+                if not device_supports_channel(device, channel):
+                    continue
+                try:
+                    await self.reset_intensity(
+                        client_id,
+                        device.slot_id,
+                        channel,
+                        immediate=True,
+                        timeout=timeout,
+                    )
+                except (HomeAssistantError, ClientError, OSError) as err:
+                    failures.append(
+                        f"reset {device.display_name} {channel_name(channel)}: {err}"
+                    )
+        return failures
